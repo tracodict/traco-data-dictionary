@@ -89,6 +89,19 @@
                 resizable: true,
                 sortable: true,
                 filter: rowModelType === 'serverSide' ? 'agTextColumnFilter' : true,
+                filterParams: rowModelType === 'serverSide' ? {
+                    filterOptions: ['equals', 'contains'],
+                    defaultOption: 'contains',
+                    suppressAndOrCondition: true,
+                    textMatcher: ({ filterOption, value, filterText }: any) => {
+                        if (filterOption === 'equals') {
+                            return value === filterText;
+                        } else if (filterOption === 'contains') {
+                            return value != null && value.toString().toLowerCase().includes(filterText.toLowerCase());
+                        }
+                        return false;
+                    }
+                } : undefined,
             },
             cacheBlockSize,
             maxBlocksInCache,

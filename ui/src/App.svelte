@@ -5,6 +5,12 @@
   import MessageList from './components/MessageList.svelte'
   import FieldList from './components/FieldList.svelte'
   import ComponentList from './components/ComponentList.svelte'
+  import EnumList from './components/EnumList.svelte'
+  import CategoryList from './components/CategoryList.svelte'
+  import SectionList from './components/SectionList.svelte'
+  import DatatypeList from './components/DatatypeList.svelte'
+  import AbbreviationList from './components/AbbreviationList.svelte'
+  import MsgContentList from './components/MsgContentList.svelte'
   import type { Message, Field, Component } from './lib/api-client'
   import { ApiClient, type SearchResponseData } from './lib/api-client'
 
@@ -95,6 +101,48 @@
     >
       Components
     </button>
+    <button 
+      class="tab-button" 
+      class:active={activeTab === 'enums'}
+      onclick={() => handleTabChange('enums')}
+    >
+      Enums
+    </button>
+    <button 
+      class="tab-button" 
+      class:active={activeTab === 'categories'}
+      onclick={() => handleTabChange('categories')}
+    >
+      Categories
+    </button>
+    <button 
+      class="tab-button" 
+      class:active={activeTab === 'sections'}
+      onclick={() => handleTabChange('sections')}
+    >
+      Sections
+    </button>
+    <button 
+      class="tab-button" 
+      class:active={activeTab === 'datatypes'}
+      onclick={() => handleTabChange('datatypes')}
+    >
+      Data Types
+    </button>
+    <button 
+      class="tab-button" 
+      class:active={activeTab === 'abbreviations'}
+      onclick={() => handleTabChange('abbreviations')}
+    >
+      Abbreviations
+    </button>
+    <button 
+      class="tab-button" 
+      class:active={activeTab === 'msgcontents'}
+      onclick={() => handleTabChange('msgcontents')}
+    >
+      Msg Contents
+    </button>
   </nav>
 
   <main class="app-content">
@@ -146,6 +194,30 @@
       <ComponentList 
         {selectedVersion}
       />
+    {:else if activeTab === 'enums'}
+      <EnumList 
+        {selectedVersion}
+      />
+    {:else if activeTab === 'categories'}
+      <CategoryList 
+        {selectedVersion}
+      />
+    {:else if activeTab === 'sections'}
+      <SectionList 
+        {selectedVersion}
+      />
+    {:else if activeTab === 'datatypes'}
+      <DatatypeList 
+        {selectedVersion}
+      />
+    {:else if activeTab === 'abbreviations'}
+      <AbbreviationList 
+        {selectedVersion}
+      />
+    {:else if activeTab === 'msgcontents'}
+      <MsgContentList 
+        {selectedVersion}
+      />
     {/if}
   </main>
 </div>
@@ -184,18 +256,22 @@
     gap: 2px;
     margin-bottom: 30px;
     border-bottom: 2px solid #34495e;
+    flex-wrap: wrap;
+    overflow-x: auto;
   }
 
   .tab-button {
-    padding: 12px 24px;
+    padding: 12px 16px;
     background: #2c3e50;
     border: none;
     border-bottom: 3px solid transparent;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 500;
     color: #bdc3c7;
     transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .tab-button:hover {
@@ -265,11 +341,22 @@
 
     .tab-navigation {
       flex-wrap: wrap;
+      gap: 1px;
     }
 
     .tab-button {
       flex: 1;
-      min-width: 120px;
+      min-width: 80px;
+      padding: 10px 8px;
+      font-size: 0.8rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .tab-button {
+      min-width: 70px;
+      padding: 8px 6px;
+      font-size: 0.75rem;
     }
   }
 </style>

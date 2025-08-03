@@ -715,10 +715,20 @@ def _apply_ssrm_filters(df: pd.DataFrame, filter_model: Union[Dict[str, Any], Fi
             filter_type = filter_def.get('filterType', 'text')
             
             if filter_type == 'text':
-                # Text filter
+                # Text filter with support for equals and contains
                 filter_value = filter_def.get('filter')
+                filter_operator = filter_def.get('type', 'contains')  # Default to contains
+                
                 if filter_value:
-                    df = df[df[col_id].astype(str).str.contains(filter_value, case=False, na=False)]
+                    if filter_operator == 'equals':
+                        # Exact match (case-insensitive)
+                        df = df[df[col_id].astype(str).str.lower() == filter_value.lower()]
+                    elif filter_operator == 'contains':
+                        # Contains match (case-insensitive) 
+                        df = df[df[col_id].astype(str).str.contains(filter_value, case=False, na=False)]
+                    else:
+                        # Default to contains for any other operator
+                        df = df[df[col_id].astype(str).str.contains(filter_value, case=False, na=False)]
             
             elif filter_type == 'number':
                 # Number filter
