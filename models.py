@@ -1,5 +1,5 @@
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel
+from typing import List, Optional, Dict, Any, Union
+from pydantic import BaseModel, RootModel
 from enum import Enum
 
 # Enums defined separately to avoid Pydantic conflicts
@@ -220,3 +220,42 @@ class APIError(BaseModel):
     error: str
     message: str
     details: Optional[Dict[str, Any]] = None
+
+# AG Grid SSRM Models
+class ColumnVO(BaseModel):
+    """Column Value Object for AG Grid SSRM"""
+    id: str
+    displayName: Optional[str] = None
+    field: Optional[str] = None
+    aggFunc: Optional[str] = None
+
+class SortModelItem(BaseModel):
+    """Sort model item for AG Grid SSRM"""
+    colId: str
+    sort: str  # 'asc' or 'desc'
+
+class FilterModel(RootModel[Dict[str, Any]]):
+    """Filter model for AG Grid SSRM"""
+    root: Dict[str, Any]
+
+class AdvancedFilterModel(RootModel[Dict[str, Any]]):
+    """Advanced filter model for AG Grid SSRM"""
+    root: Dict[str, Any]
+
+class IServerSideGetRowsRequest(BaseModel):
+    """AG Grid Server-Side Row Model request interface"""
+    startRow: Optional[int] = None
+    endRow: Optional[int] = None
+    rowGroupCols: List[ColumnVO] = []
+    valueCols: List[ColumnVO] = []
+    pivotCols: List[ColumnVO] = []
+    pivotMode: bool = False
+    groupKeys: List[str] = []
+    filterModel: Optional[Union[Dict[str, Any], FilterModel, AdvancedFilterModel]] = None
+    sortModel: List[SortModelItem] = []
+
+class LoadSuccessParams(BaseModel):
+    """Response parameters for successful SSRM load"""
+    rowData: List[Dict[str, Any]]
+    rowCount: Optional[int] = None  # Total count for infinite scrolling
+    storeInfo: Optional[Dict[str, Any]] = None

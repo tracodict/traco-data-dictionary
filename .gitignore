@@ -21,6 +21,7 @@ wheels/
 *.egg
 MANIFEST
 
+
 # Virtual environments
 .env
 .venv
@@ -60,3 +61,8 @@ htmlcov/
 
 # Local development
 local_config.py
+
+
+# node
+
+node_modules/

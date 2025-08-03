@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIX Dictionary UI Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #e1e5e9;
+        }
+        .container {
+            margin: 0 auto;
+            background: #1a1a1a;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            overflow: hidden;
+            border: 1px solid #34495e;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: #ecf0f1;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #34495e;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            background: linear-gradient(45deg, #3498db, #2ecc71);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header p {
+            margin: 0;
+            color: #95a5a6;
+        }
+        #fix-dictionary-app {
+            min-height: 600px;
+            padding: 0;
+            background: #1a1a1a;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            color: #95a5a6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>FIX Dictionary Browser</h1>
+            <p>Svelte 5.37.2 Single-SPA Application with Dark Theme</p>
+        </div>
+        <div id="fix-dictionary-app" data-app="fix-dictionary">
+            <div class="loading">Loading FIX Dictionary UI...</div>
+        </div>
+    </div>
+
+    <!-- Single-SPA Integration -->
+    <script>
+        // Mock single-spa environment for testing
+        if (!window.singleSpaNavigate) {
+            window.singleSpaNavigate = function() { console.log('Mock single-spa navigate'); };
+        }
+        
+        // Load and mount the Svelte application using ES module imports
+        console.log('Loading FIX Dictionary UI...');
+    </script>
+    <script type="module">
+        // Import the lifecycle functions from the ES module
+        import { bootstrap, mount, unmount } from '/single-spa-entry.js';
+        
+        console.log('ES module loaded, lifecycle functions available');
+        
+        // Mount the application
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Attempting to mount FIX Dictionary UI...');
+            
+            try {
+                await bootstrap();
+                await mount();
+                console.log('FIX Dictionary UI mounted successfully!');
+                document.querySelector('.loading').style.display = 'none';
+            } catch (error) {
+                console.error('Failed to mount FIX Dictionary UI:', error);
+                document.querySelector('.loading').innerHTML = 'Failed to load UI: ' + error.message;
+            }
+        });
+        
+        // Expose for global access if needed
+        window.fixDictionaryLifecycle = { bootstrap, mount, unmount };
+    </script>
+</body>
+</html>
