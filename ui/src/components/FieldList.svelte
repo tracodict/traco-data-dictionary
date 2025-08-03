@@ -62,7 +62,7 @@
       filter: 'agTextColumnFilter'
     },
     {
-      field: 'datatype',
+      field: 'type',
       headerName: 'Data Type',
       width: 120,
       minWidth: 80,
