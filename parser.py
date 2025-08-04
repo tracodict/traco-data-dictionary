@@ -34,7 +34,8 @@ class FIXDictionaryParser:
             'sections': pd.DataFrame(),
             'datatypes': pd.DataFrame(),
             'abbreviations': pd.DataFrame(),
-            'msgcontents': pd.DataFrame()
+            'msgcontents': pd.DataFrame(),
+            'msgform': pd.DataFrame()
         }
         
         try:
@@ -82,6 +83,9 @@ class FIXDictionaryParser:
             msgcontents_file = os.path.join(version_path, "MsgContents.xml")
             if os.path.exists(msgcontents_file):
                 data['msgcontents'] = self._parse_msgcontents_to_df(msgcontents_file)
+            
+            # Generate msgform by joining msgcontents with fields and components
+            data['msgform'] = self._generate_msgform(data)
                 
         except Exception as e:
             logger.error(f"Error loading version {version}: {e}")
@@ -386,6 +390,126 @@ class FIXDictionaryParser:
         
         return pd.DataFrame(data)
     
+    def _generate_msgform(self, data: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+        """Generate msgform by joining msgcontents with fields, components, and messages"""
+        msgform_data = []
+        
+        try:
+            msgcontents_df = data.get('msgcontents', pd.DataFrame())
+            fields_df = data.get('fields', pd.DataFrame())
+            components_df = data.get('components', pd.DataFrame())
+            messages_df = data.get('messages', pd.DataFrame())
+            
+            if msgcontents_df.empty:
+                return pd.DataFrame()
+            
+            for _, mc_row in msgcontents_df.iterrows():
+                tag_text = mc_row.get('tag_text', '')
+                component_id = mc_row.get('component_id', 0)
+                
+                # Left join with messages table to get msgType and message name
+                msg_type = ''
+                component_name = ''
+                if not messages_df.empty:
+                    message_matches = messages_df[messages_df['component_id'] == component_id]
+                    if not message_matches.empty:
+                        message_row = message_matches.iloc[0]
+                        msg_type = message_row.get('msg_type', '')
+                        component_name = message_row.get('name', '')
+                
+                # Left join with components table to get component name
+                if not components_df.empty:
+                    comp_matches = components_df[components_df['component_id'] == component_id]
+                    if not comp_matches.empty:
+                        comp_row = comp_matches.iloc[0]
+                        component_name = comp_row.get('name', component_name)
+                
+                # Try to parse tag_text as integer (field reference)
+                try:
+                    tag_num = int(tag_text)
+                    is_field = True
+                except (ValueError, TypeError):
+                    tag_num = None
+                    is_field = False
+                
+                if is_field and tag_num is not None:
+                    # Join with fields table
+                    field_matches = fields_df[fields_df['tag'] == tag_num]
+                    if not field_matches.empty:
+                        field_row = field_matches.iloc[0]
+                        msgform_row = {
+                            'component_id': component_id,
+                            'tag_text': tag_text,
+                            'tag': tag_num,
+                            'name': field_row.get('name', ''),
+                            'abbr_name': field_row.get('abbr_name', ''),
+                            'type': field_row.get('type', ''),
+                            'reqd': mc_row.get('reqd', False),
+                            'indent': mc_row.get('indent', 0),
+                            'position': mc_row.get('position', 0.0),
+                            'comments': field_row.get('description', ''),
+                            'field_or_component': 'Field',
+                            'inlined': mc_row.get('inlined'),
+                            'added': field_row.get('added'),
+                            'updated': field_row.get('updated'),
+                            'deprecated': field_row.get('deprecated'),
+                            'msgType': msg_type,
+                            'componentName': component_name
+                        }
+                        msgform_data.append(msgform_row)
+                else:
+                    # Join with components table by name
+                    component_matches = components_df[components_df['name'].str.lower() == tag_text.lower()]
+                    if not component_matches.empty:
+                        comp_row = component_matches.iloc[0]
+                        msgform_row = {
+                            'component_id': component_id,
+                            'tag_text': tag_text,
+                            'tag': None,
+                            'name': comp_row.get('name', ''),
+                            'abbr_name': comp_row.get('abbr_name', ''),
+                            'type': comp_row.get('component_type', ''),
+                            'reqd': mc_row.get('reqd', False),
+                            'indent': mc_row.get('indent', 0),
+                            'position': mc_row.get('position', 0.0),
+                            'comments': comp_row.get('description', ''),
+                            'field_or_component': 'Component',
+                            'inlined': mc_row.get('inlined'),
+                            'added': comp_row.get('added'),
+                            'updated': comp_row.get('updated'),
+                            'deprecated': comp_row.get('deprecated'),
+                            'msgType': msg_type,
+                            'componentName': component_name
+                        }
+                        msgform_data.append(msgform_row)
+                    else:
+                        # Create row for unmatched tag_text (could be a group or unknown reference)
+                        msgform_row = {
+                            'component_id': component_id,
+                            'tag_text': tag_text,
+                            'tag': None,
+                            'name': tag_text,
+                            'abbr_name': '',
+                            'type': 'Unknown',
+                            'reqd': mc_row.get('reqd', False),
+                            'indent': mc_row.get('indent', 0),
+                            'position': mc_row.get('position', 0.0),
+                            'comments': mc_row.get('description', ''),
+                            'field_or_component': 'Unknown',
+                            'inlined': mc_row.get('inlined'),
+                            'added': None,
+                            'updated': None,
+                            'deprecated': None,
+                            'msgType': msg_type,
+                            'componentName': component_name
+                        }
+                        msgform_data.append(msgform_row)
+                        
+        except Exception as e:
+            logger.error(f"Error generating msgform: {e}")
+        
+        return pd.DataFrame(msgform_data)
+    
     # Query methods with DataFrame operations
     def get_messages(self, version: FIXVersion, limit: int = 100, offset: int = 0, 
                     sort_by: str = 'name', sort_dir: str = 'asc', filters: Dict = None) -> pd.DataFrame:
@@ -487,6 +611,31 @@ class FIXDictionaryParser:
         # Apply pagination
         return df.iloc[offset:offset + limit]
     
+    def get_msgform(self, version: FIXVersion, limit: int = 100, offset: int = 0, 
+                   sort_by: str = 'position', sort_dir: str = 'asc', filters: Dict = None) -> pd.DataFrame:
+        """Get msgform (message structure) with pagination, sorting, and filtering"""
+        df = self.data.get(version, {}).get('msgform', pd.DataFrame())
+        
+        if df.empty:
+            return df
+        
+        # Apply filters
+        if filters:
+            for field, value in filters.items():
+                if field in df.columns and value:
+                    if isinstance(value, str):
+                        df = df[df[field].str.contains(value, case=False, na=False)]
+                    else:
+                        df = df[df[field] == value]
+        
+        # Apply sorting
+        if sort_by in df.columns:
+            ascending = sort_dir.lower() == 'asc'
+            df = df.sort_values(by=sort_by, ascending=ascending)
+        
+        # Apply pagination
+        return df.iloc[offset:offset + limit]
+    
     def get_message_by_type(self, msg_type: str, version: FIXVersion) -> Optional[pd.Series]:
         """Get message by message type"""
         df = self.data.get(version, {}).get('messages', pd.DataFrame())
@@ -530,6 +679,16 @@ class FIXDictionaryParser:
             return df
         
         return df[df['tag'] == tag]
+    
+    def get_msgform_for_component(self, component_id: int, version: FIXVersion) -> pd.DataFrame:
+        """Get msgform (message structure) for a specific component/message"""
+        df = self.data.get(version, {}).get('msgform', pd.DataFrame())
+        if df.empty:
+            return df
+        
+        # Filter by component_id and sort by position to maintain message structure order
+        result = df[df['component_id'] == component_id].sort_values(by='position')
+        return result
     
     def search(self, query: str, search_type: SearchType, version: FIXVersion, 
               match_abbr_only: bool = False, is_regex: bool = False, 

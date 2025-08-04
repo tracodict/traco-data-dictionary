@@ -26,7 +26,9 @@
 
   // React to version and search changes
   $effect(() => {
+    console.log('MsgFormList: effect triggered', { gridApi: !!gridApi, selectedVersion, searchQuery });
     if (gridApi && (selectedVersion || searchQuery)) {
+      console.log('MsgFormList: refreshing server side');
       gridApi.refreshServerSide({ purge: true });
     }
   });
@@ -43,13 +45,69 @@
       filter: 'agTextColumnFilter'
     },
     {
-      field: 'tag_text',
-      headerName: 'Tag Text',
-      width: 150,
-      minWidth: 120,
+      field: 'msgType',
+      headerName: 'Msg Type',
+      width: 100,
+      minWidth: 80,
       resizable: true,
       sortable: true,
       filter: 'agTextColumnFilter'
+    },
+    {
+      field: 'componentName',
+      headerName: 'Component Name',
+      width: 180,
+      minWidth: 150,
+      resizable: true,
+      sortable: true,
+      filter: 'agTextColumnFilter'
+    },
+    {
+      field: 'tag',
+      headerName: 'Tag',
+      width: 80,
+      minWidth: 60,
+      resizable: true,
+      sortable: true,
+      filter: 'agTextColumnFilter',
+      cellRenderer: (params: any) => params.value ? `[${params.value}]` : ''
+    },
+    {
+      field: 'name',
+      headerName: 'Name',
+      width: 200,
+      minWidth: 150,
+      resizable: true,
+      sortable: true,
+      filter: 'agTextColumnFilter'
+    },
+    {
+      field: 'abbr_name',
+      headerName: 'Abbr Name',
+      width: 120,
+      minWidth: 100,
+      resizable: true,
+      sortable: true,
+      filter: 'agTextColumnFilter'
+    },
+    {
+      field: 'type',
+      headerName: 'Type',
+      width: 100,
+      minWidth: 80,
+      resizable: true,
+      sortable: true,
+      filter: 'agTextColumnFilter'
+    },
+    {
+      field: 'reqd',
+      headerName: 'Required',
+      width: 100,
+      minWidth: 80,
+      resizable: true,
+      sortable: true,
+      filter: 'agTextColumnFilter',
+      cellRenderer: (params: any) => params.value ? 'Yes' : 'No'
     },
     {
       field: 'indent',
@@ -70,35 +128,44 @@
       filter: 'agTextColumnFilter'
     },
     {
-      field: 'reqd',
-      headerName: 'Required',
-      width: 100,
-      minWidth: 80,
-      resizable: true,
-      sortable: true,
-      filter: 'agTextColumnFilter',
-      cellRenderer: (params: any) => params.value ? 'Yes' : 'No'
-    },
-    {
-      field: 'description',
-      headerName: 'Description',
+      field: 'comments',
+      headerName: 'Comments',
       width: 300,
       minWidth: 200,
       resizable: true,
       sortable: true,
       filter: 'agTextColumnFilter',
-      wrapText: true
+      tooltipField: 'comments',
+      cellRenderer: (params: any) => {
+        const value = params.value || '';
+        if (value.length > 100) {
+          return `<span title="${value}">${value.substring(0, 100)}...</span>`;
+        }
+        return value;
+      }
+    },
+    {
+      field: 'field_or_component',
+      headerName: 'Source Type',
+      width: 120,
+      minWidth: 100,
+      resizable: true,
+      sortable: true,
+      filter: 'agTextColumnFilter'
     }
   ];
 
   // Handle grid ready and setup server-side datasource
   function handleGridReady(api: GridApi) {
+    console.log('MsgFormList: handleGridReady called', api);
     gridApi = api;
     
     serverSideDatasource = {
       getRows: async (params) => {
+        console.log('MsgFormList: getRows called', params);
         const startRow = params.request.startRow || 0;
         const endRow = params.request.endRow || 100;
+        const groupKeys = params.request.groupKeys || [];
         
         try {
           loading = true;
@@ -111,17 +178,27 @@
             valueCols: params.request.valueCols || [],
             pivotCols: params.request.pivotCols || [],
             pivotMode: params.request.pivotMode || false,
-            groupKeys: params.request.groupKeys || [],
+            groupKeys: groupKeys,
             filterModel: params.request.filterModel || undefined,
             sortModel: params.request.sortModel || []
           };
           
+          console.log('MsgFormList: calling SSRM API', {
+            datasource: 'msgform',
+            request: ssrmRequest,
+            version: selectedVersion,
+            searchQuery,
+            groupKeys
+          });
+          
           const response: LoadSuccessParams = await apiClient.getSSRMData(
-            'msgcontents', 
+            'msgform', 
             ssrmRequest, 
             selectedVersion,
             searchQuery
           );
+          
+          console.log('MsgFormList: SSRM response', response);
           
           if (response.rowCount !== undefined) {
             totalCount = response.rowCount;
@@ -133,7 +210,7 @@
           });
           
         } catch (error) {
-          console.error('MsgContentList SSRM error:', error);
+          console.error('MsgFormList SSRM error:', error);
           params.fail();
         } finally {
           loading = false;
@@ -141,36 +218,37 @@
       }
     };
     
+    console.log('MsgFormList: setting datasource', serverSideDatasource);
     api.setGridOption('serverSideDatasource', serverSideDatasource);
   }
 </script>
 
-<div class="msgcontent-list">
+<div class="msgform-list">
   <div class="list-header">
-    <h3>Message Contents</h3>
-    <div class="count-info">
-      Total: {totalCount} message contents
-      {#if loading}
-        <span class="loading-indicator">Loading...</span>
-      {/if}
-    </div>
+    <h2>Message Form Structure ({selectedVersion})</h2>
+    {#if totalCount > 0}
+      <span class="count-badge">{totalCount.toLocaleString()} items</span>
+    {/if}
   </div>
-
+  
   <div class="grid-container">
-      <AgGrid 
-        {columnDefs}
-        height="500px"
-        onGridReady={handleGridReady}
-        rowModelType="serverSide"
-        cacheBlockSize={100}
-        maxBlocksInCache={10}
-      />
-    </div>
+    <AgGrid
+      {columnDefs}
+      height="500px"
+      onGridReady={handleGridReady}
+      rowModelType="serverSide"
+      cacheBlockSize={100}
+      maxBlocksInCache={10}
+      treeData={true}
+      isServerSideGroup={(dataItem) => !dataItem.tag || dataItem.tag === ''}
+      getServerSideGroupKey={(dataItem) => dataItem.name}
+    />
+  </div>
 </div>
 
 <style>
-  .msgcontent-list {
-    margin-bottom: 30px;
+  .msgform-list {
+    width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -180,37 +258,29 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    padding: 0 10px;
-  }
-
-  h3 {
-    color: #ecf0f1;
-    font-size: 1.25rem;
-    margin: 0;
-    border-bottom: 2px solid #34495e;
+    margin-bottom: 20px;
     padding-bottom: 10px;
+    border-bottom: 1px solid #34495e;
   }
 
-  .count-info {
-    color: #95a5a6;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  .list-header h2 {
+    margin: 0;
+    color: #ecf0f1;
+    font-size: 1.5rem;
   }
 
-  .loading-indicator {
-    color: #3498db;
-    font-style: italic;
+  .count-badge {
+    background: #3498db;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
   }
 
   .grid-container {
     flex: 1;
-    background: #2c3e50;
-    border-radius: 8px;
-    border: 1px solid #34495e;
-    overflow: hidden;
     min-height: 500px;
+    width: 100%;
   }
 </style>

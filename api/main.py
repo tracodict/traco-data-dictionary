@@ -251,7 +251,7 @@ async def list_messages(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=500, description="Items per page"),
     sort_by: str = Query("name", description="Field to sort by"),
-    sort_dir: str = Query("asc", regex="^(asc|desc)$", description="Sort direction"),
+    sort_dir: str = Query("asc", pattern="^(asc|desc)$", description="Sort direction"),
     category: Optional[str] = Query(None, description="Filter by category"),
     section: Optional[str] = Query(None, description="Filter by section"),
     msg_type: Optional[str] = Query(None, description="Filter by message type"),
@@ -321,7 +321,7 @@ async def list_fields(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=500, description="Items per page"),
     sort_by: str = Query("tag", description="Field to sort by"),
-    sort_dir: str = Query("asc", regex="^(asc|desc)$", description="Sort direction"),
+    sort_dir: str = Query("asc", pattern="^(asc|desc)$", description="Sort direction"),
     datatype: Optional[str] = Query(None, description="Filter by datatype"),
     tag_min: Optional[int] = Query(None, description="Minimum tag number"),
     tag_max: Optional[int] = Query(None, description="Maximum tag number"),
@@ -397,7 +397,7 @@ async def list_components(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=500, description="Items per page"),
     sort_by: str = Query("name", description="Field to sort by"),
-    sort_dir: str = Query("asc", regex="^(asc|desc)$", description="Sort direction"),
+    sort_dir: str = Query("asc", pattern="^(asc|desc)$", description="Sort direction"),
     category: Optional[str] = Query(None, description="Filter by category"),
     component_type: Optional[str] = Query(None, description="Filter by component type"),
     name_contains: Optional[str] = Query(None, description="Filter by name containing text"),
@@ -624,15 +624,24 @@ async def get_ssrm_data(
         if df.empty:
             return LoadSuccessParams(rowData=[], rowCount=0)
         
-        logger.info(f"SSRM request for {datasource}: startRow={request.startRow}, endRow={request.endRow}, search={search}")
+        logger.info(f"SSRM request for {datasource}: startRow={request.startRow}, endRow={request.endRow}, search={search}, groupKeys={request.groupKeys}")
         
-        # Apply search filter first if provided
-        if search and search.strip():
-            df = _apply_search_filter(df, search.strip())
+        # Handle tree data grouping for msgform datasource
+        if datasource == 'msgform' and request.groupKeys and len(request.groupKeys) > 0:
+            # Filter by the group key (componentName)
+            group_key = request.groupKeys[-1]
+            if group_key and 'componentName' in df.columns:
+                df = df[df['componentName'] == group_key]
+                logger.info(f"Filtered msgform by componentName: {group_key}, rows: {len(df)}")
+        else:
+            # Apply search filter first if provided
+            if search and search.strip():
+                df = _apply_search_filter(df, search.strip())
+            # Apply filters
+            if request.filterModel:
+                df = _apply_ssrm_filters(df, request.filterModel)
         
-        # Apply filters
-        if request.filterModel:
-            df = _apply_ssrm_filters(df, request.filterModel)
+
         
         # Apply sorting
         if request.sortModel:

@@ -1,7 +1,7 @@
 <script lang="ts">
   import AgGrid from './AgGrid.svelte';
   import type { FieldSummary, IServerSideGetRowsRequest, LoadSuccessParams } from '../lib/api-client';
-  import ApiClient from '../lib/api-client';
+  import { getApiClient } from '../lib/api-client-instance';
   import type { GridApi, ColDef } from 'ag-grid-community';
   import type { IServerSideDatasource } from 'ag-grid-community';
   
@@ -17,7 +17,7 @@
     searchQuery = ''
   }: Props = $props();
 
-  const apiClient = new ApiClient();
+  const apiClient = getApiClient();
   let gridApi: GridApi;
   let serverSideDatasource: IServerSideDatasource;
   let totalCount = $state(0);

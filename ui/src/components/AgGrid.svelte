@@ -9,7 +9,8 @@
         type GridApi,
         type IServerSideDatasource,
         themeQuartz,
-        colorSchemeDarkBlue
+        colorSchemeDarkBlue,
+        TooltipModule,
     } from 'ag-grid-community';
     
     // Import enterprise features and modules
@@ -38,7 +39,8 @@
         StatusBarModule,
         SideBarModule,
         RowGroupingModule,
-        ValidationModule
+        ValidationModule,
+        TooltipModule
     ]);
 
     interface Props {
@@ -50,6 +52,9 @@
         serverSideDatasource?: IServerSideDatasource;
         cacheBlockSize?: number;
         maxBlocksInCache?: number;
+        treeData?: boolean;
+        isServerSideGroup?: (dataItem: any) => boolean;
+        getServerSideGroupKey?: (dataItem: any) => string;
     }
 
     let { 
@@ -60,7 +65,10 @@
         rowModelType = 'clientSide',
         serverSideDatasource,
         cacheBlockSize = 50,
-        maxBlocksInCache = 10
+        maxBlocksInCache = 10,
+        treeData = false,
+        isServerSideGroup,
+        getServerSideGroupKey
     }: Props = $props();
 
     // Create a custom dark theme using Theming API
@@ -85,6 +93,9 @@
             rowModelType,
             theme: darkTheme,
             rowHeight: rowModelType === 'serverSide' ? 40 : undefined,
+            treeData,
+            isServerSideGroup,
+            getServerSideGroupKey,
             defaultColDef: {
                 resizable: true,
                 sortable: true,

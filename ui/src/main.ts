@@ -1,7 +1,7 @@
 import { mount as svelteMount, unmount as svelteUnmount } from 'svelte'
 import App from './App.svelte'
 
-// Type declaration for single-spa
+// Type declaration for single-spa and development flag
 declare global {
   interface Window {
     singleSpaNavigate?: any;
@@ -9,6 +9,7 @@ declare global {
     mount?: any;
     unmount?: any;
   }
+  const __DEV__: boolean;
 }
 
 let app: any = null
@@ -67,12 +68,16 @@ if (typeof window !== 'undefined') {
 }
 
 // For development mode (non single-spa)
-if (!window.singleSpaNavigate) {
-  // Create a container element for development
-  const devContainer = document.createElement('div')
-  devContainer.id = 'fix-dictionary-app'
-  document.body.appendChild(devContainer)
-  
-  // Auto-mount in development mode
-  mount().catch(console.error)
+if (__DEV__ && !window.singleSpaNavigate) {
+  // In development, mount directly to the #app div
+  const appDiv = document.getElementById('app')
+  if (appDiv) {
+    app = svelteMount(App, {
+      target: appDiv,
+      props: {
+        name: 'fix-dictionary',
+        singleSpa: false
+      }
+    })
+  }
 }

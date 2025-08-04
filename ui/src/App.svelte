@@ -11,8 +11,10 @@
   import DatatypeList from './components/DatatypeList.svelte'
   import AbbreviationList from './components/AbbreviationList.svelte'
   import MsgContentList from './components/MsgContentList.svelte'
+  import MsgFormList from './components/MsgFormList.svelte'
   import type { Message, Field, Component } from './lib/api-client'
   import { ApiClient, type SearchResponseData } from './lib/api-client'
+  import { getApiClient, setApiClient } from './lib/api-client-instance'
 
   interface Props {
     name?: string;
@@ -31,8 +33,12 @@
 
   onMount(() => {
     // Initialize API client with base URL
-    const baseUrl = singleSpa ? window.location.origin : 'http://localhost:8000'
+    // In development: use VITE_API_BASE_URL (http://localhost:8000)
+    // In production: use empty string for relative URLs (same origin)
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin
     apiClient = new ApiClient(baseUrl)
+    // Set the global instance for other components to use
+    setApiClient(apiClient)
     // Note: List components now handle their own data loading via SSRM
   })
 
@@ -143,6 +149,13 @@
     >
       Msg Contents
     </button>
+    <button 
+      class="tab-button" 
+      class:active={activeTab === 'msgform'}
+      onclick={() => handleTabChange('msgform')}
+    >
+      Msg Form
+    </button>
   </nav>
 
   <main class="app-content">
@@ -216,6 +229,10 @@
       />
     {:else if activeTab === 'msgcontents'}
       <MsgContentList 
+        {selectedVersion}
+      />
+    {:else if activeTab === 'msgform'}
+      <MsgFormList 
         {selectedVersion}
       />
     {/if}
